@@ -39,11 +39,35 @@ spec:
         app: rng
         enabled: "yes"
     spec:
+      terminationGracePeriodSeconds: 3
       containers:
       - image: dockercoins/rng:v0.1
         name: rng
         ports:
         - containerPort: 80
+        # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-liveness-http-request
+        readinessProbe:
+          httpGet:
+            path: /20
+            port: 80
+            httpHeaders:
+            - name: Custom-Header
+              value: Awesome
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          failureThreshold: 3
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - |
+              awk '{ if ($1 < 60) exit 0; else exit 1 }' /proc/uptime
+          initialDelaySeconds: 50
+          periodSeconds: 1
+          failureThreshold: 1
+
 
 ---
 
