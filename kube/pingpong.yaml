@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: pingpong
+  name: pingpong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pingpong
+  template:
+    metadata:
+      labels:
+        app: pingpong
+    spec:
+      terminationGracePeriodSeconds: 3
+      volumes:
+      - name: conf
+        configMap:
+          name: pingpong
+      containers:
+      - image: alpine
+        name: alpine
+        command:
+        - sh
+        - -c
+        - ping $TARGET
+        env:
+        #  k logs deploy/pingpong
+        - name: TARGET
+          # value: localhost
+          valueFrom:
+            configMapKeyRef:
+              name: pingpong
+              key: target
+        # k exec -it pingpong-6c44d64fc5-vzlvj -- ls /conf
+        volumeMounts:
+        - name: conf
+          mountPath: /conf
+
+# k create configmap pingpong --from-file hello.conf --from-literal target=1.1.1.1 -o yaml --dry-run=client > pingpong.yaml
+# ---
+# apiVersion: v1
+# data:
+#   hello.conf: |
+#     This is a hello conf message.
+#     Enjoy!
+#   target: 1.1.1.1
+# kind: ConfigMap
+# metadata:
+#   name: pingpong
