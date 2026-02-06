@@ -1,0 +1,155 @@
+# k run --rm -it --image=alpine/curl tmp-curl -- sh
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: public
+spec:
+  podSelector:
+    matchLabels:
+      security: public
+  ingress:
+  - from: []
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: private
+spec:
+  podSelector:
+    matchLabels:
+      security: private
+  ingress: []
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: fallback-policy
+spec:
+  podSelector:
+    matchExpressions:
+    - key: security
+      operator: NotIn
+      values:
+        - public
+        - private
+  ingress: []
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: green
+  name: green
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: green
+  template:
+    metadata:
+      labels:
+        app: green
+        security: public
+    spec:
+      containers:
+      - image: jpetazzo/color
+        name: color
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: green
+  name: green
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: green
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: blue
+  name: blue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blue
+  template:
+    metadata:
+      labels:
+        app: blue
+        security: private
+    spec:
+      containers:
+      - image: jpetazzo/color
+        name: color
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: blue
+  name: blue
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: blue
+status:
+  loadBalancer: {}
+---
+#################
+# WHITE
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: white
+  name: white
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: white
+  template:
+    metadata:
+      labels:
+        app: white
+        # security: public
+    spec:
+      containers:
+      - image: jpetazzo/color
+        name: color
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: white
+  name: white
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: white
+status:
+  loadBalancer: {}
+---
